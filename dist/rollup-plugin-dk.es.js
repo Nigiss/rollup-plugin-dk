@@ -1,14 +1,16 @@
 import fs from 'fs';
+import path from 'path';
 
 const fileCache = {};
-const includesReg = /include\s*\(\[([\s\S]+)\]\)\s*;?/;
+const fileImportDict = {};
+const includesReg = /include\s*\(\[([^\]]+)\]\)\s*;?/;
 
 function nonNullFilter (item) {
   return !!item
 }
 
-function readFile (path) {
-  return fileCache[path] || (fileCache[path] = fs.readFileSync(path, 'utf8'))
+function readFile (filepath) {
+  return fileCache[filepath] || (fileCache[filepath] = fs.readFileSync(filepath, 'utf8'))
 }
 
 function isEs6Code (cnt) {
@@ -37,7 +39,7 @@ function parseIncludes (dir, cnt) {
       return
     }
     return line.match(/\s*['"]([^'"]+)['"]\s*/)[1]
-  }).filter(nonNullFilter).map(path => dir + path)
+  }).filter(nonNullFilter).map(filepath => path.normalize(dir + filepath))
 }
 
 function parseExports (cnt) {
@@ -65,12 +67,24 @@ function removeIncludes (cnt) {
   return cnt.replace(/include\(\[[\s\S]+?\]\)\s*;\s*/, '')
 }
 
-function generateImports (paths) {
-  return paths.map(path => {
-    var exportFns = parseExports(readFile(path));
+function generateImports (dir, paths) {
+  return paths.map(filepath => {
+    let exportFns = parseExports(readFile(filepath));
     if (!exportFns) return null
 
-    return `import { ${exportFns.join(', ')} } from '${path}';`
+    let imports = exportFns.map(fnStr => {
+      fileImportDict[dir] = fileImportDict[dir] || {};
+      fileImportDict[dir][fnStr] = (fileImportDict[dir][fnStr] + 1) || 1;
+
+      // 除第一次import外，都需要改变函数名
+      var occur = fileImportDict[dir][fnStr];
+      if (occur === 1) {
+        return fnStr
+      }
+
+      return `${fnStr} as ${fnStr}__TEMP__${occur}`
+    }).join(', ');
+    return `import { ${imports} } from '${filepath}';`
   }).filter(nonNullFilter).join('\n')
 }
 
@@ -155,15 +169,20 @@ var transform = function (tmpl) {
   return tmpl;
 };
 
-function getCurrDir (path) {
-  return path.replace(/(.*\/)(.*)/, '$1')
+function getCurrDir (path$$1) {
+  return path$$1.replace(/(.*\/)(.*)/, '$1')
 }
 
 var index = function () {
   return {
     name: 'dk',
     load (id) {
-      let cnt = readFile(Array.isArray(id) ? id[0] : id);
+      // css 不解析
+      if (id.match(/\.css$/)) {
+        return false
+      }
+
+      let cnt = readFile(id);
       if (needParse(cnt)) {
         return cnt
       }
@@ -171,7 +190,7 @@ var index = function () {
       let currDir = getCurrDir(id);
       let includePaths = parseIncludes(currDir, cnt);
       let exportedFns = parseExports(cnt);
-      let code = `${generateImports(includePaths)}\n${removeIncludes(cnt)}\n${generateExports(exportedFns)}`;
+      let code = `${generateImports(currDir, includePaths)}\n${removeIncludes(cnt)}\n${generateExports(exportedFns)}`;
       return transform(code)
     }
   }

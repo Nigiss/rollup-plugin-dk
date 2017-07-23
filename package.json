@@ -29,7 +29,8 @@
   },
   "dependencies": {},
   "builtins": [
-    "fs"
+    "fs",
+    "path"
   ],
   "devDependencies": {
     "eslint": "^4.3.0",

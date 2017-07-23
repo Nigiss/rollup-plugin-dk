@@ -8,11 +8,17 @@ import mod4 from '../mod4-es6'
 include([
   'mod1.js',
   '../mod2.js',
-  '../mod5-tpl.js'
+  '../mod5-tpl.js',
+  '../mod6.js',
+  'style.css'
 ])
 
 /* exported entry */
 
 export default function () {
+  if (this['test']) {
+    return
+  }
+
   return mod1__fn1() + mod2__fn2() + mod4() + mod5__tpl1()
 }

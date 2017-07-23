@@ -17,7 +17,12 @@ export default function () {
   return {
     name: 'dk',
     load (id) {
-      let cnt = readFile(Array.isArray(id) ? id[0] : id)
+      // css 不解析
+      if (id.match(/\.css$/)) {
+        return false
+      }
+
+      let cnt = readFile(id)
       if (needParse(cnt)) {
         return cnt
       }
@@ -25,7 +30,7 @@ export default function () {
       let currDir = getCurrDir(id)
       let includePaths = parseIncludes(currDir, cnt)
       let exportedFns = parseExports(cnt)
-      let code = `${generateImports(includePaths)}\n${removeIncludes(cnt)}\n${generateExports(exportedFns)}`
+      let code = `${generateImports(currDir, includePaths)}\n${removeIncludes(cnt)}\n${generateExports(exportedFns)}`
       return transform(code)
     }
   }
