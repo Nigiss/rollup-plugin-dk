@@ -1,0 +1,14 @@
+{
+  "plugins": {
+    "es_modules": {},
+    "node": {},
+    "requirejs": {
+      "baseURL": "./",
+      "paths": {}
+    }
+  },
+  "libs": [
+    "ecmascript"
+  ],
+  "ecmaVersion": 6
+}

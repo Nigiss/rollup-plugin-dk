@@ -1,0 +1,40 @@
+{
+  "name": "rollup-plugin-dk",
+  "version": "1.0.0",
+  "description": "Seamless migration from es5 to es6 for `dk-fe` project",
+  "main": "dist/rollup-plugin-dk.cjs.js",
+  "jsnext:main": "dist/rollup-plugin-dk.es.js",
+  "files": [
+    "src",
+    "dist/rollup-plugin-dk.cjs.js",
+    "dist/rollup-plugin-dk.es.js",
+    "README"
+  ],
+  "keywords": [
+    "rollup-plugin",
+    "dk",
+    "es2015",
+    "es6"
+  ],
+  "homepage": "https://github.com/rollup/rollup-plugin-dk",
+  "author": "Jun Yu",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint src/*.js test/*.js",
+    "prebuild": "rm -rf dist/*",
+    "build": "rollup -c",
+    "pretest": "npm run lint && npm run build",
+    "test": "mocha",
+    "prepublish": "npm run lint && npm test"
+  },
+  "dependencies": {},
+  "builtins": [
+    "fs"
+  ],
+  "devDependencies": {
+    "eslint": "^4.3.0",
+    "eslint-config-standard": "^10.2.1",
+    "mocha": "^3.4.2",
+    "rollup": "^0.45.2"
+  }
+}
