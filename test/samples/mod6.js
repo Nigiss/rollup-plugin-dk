@@ -1,5 +1,10 @@
+/* global include */
 /* eslint-disable no-unused-vars, camelcase */
 
-/* exported mod2__fn2 */
+include([
+  './mod2.js'
+])
 
 function mod2__fn2 () {}
+
+/* exported mod2__fn2 */

@@ -1,16 +1,24 @@
 import fs from 'fs'
 import path from 'path'
+import transform from './transform-tpl'
+import R from 'ramda'
 
 const fileCache = {}
-const fileImportDict = {}
 const includesReg = /include\s*\(\[([^\]]+)\]\)\s*;?/
+const fnReg = /^function\s+([$\w]+)/
 
 function nonNullFilter (item) {
   return !!item
 }
 
 function readFile (filepath) {
-  return fileCache[filepath] || (fileCache[filepath] = fs.readFileSync(filepath, 'utf8'))
+  // css 不解析
+  if (filepath.match(/\.css$/)) return null
+
+  let cnt = fileCache[filepath] || (fileCache[filepath] = fs.readFileSync(filepath, 'utf8'))
+
+  // 转译模板
+  return transform(cnt)
 }
 
 function isEs6Code (cnt) {
@@ -25,10 +33,10 @@ function needParse (cnt) {
   // es6 module无需解析
   // 但是es6 module 和 include 混用时要解析
   if (isEs6Code(cnt) && !hasInclude(cnt)) {
-    return true
+    return false
   }
 
-  return false
+  return true
 }
 
 function parseIncludes (dir, cnt) {
@@ -43,52 +51,58 @@ function parseIncludes (dir, cnt) {
 }
 
 function parseExports (cnt) {
-  if (needParse(cnt)) {
-    return null
-  }
+  if (!cnt || !needParse(cnt)) return null
 
-  // 解析exported语法：/* exported chList__entry */
-  let reg = /\/\*\s+exported\s+(\w+)\s+\*\//
-  var exports = (cnt.match(new RegExp(reg, 'g')) || []).map(exported => reg.exec(exported)[1])
+  // 同时包含 exported注释 和 函数声明时，才认为需要 export
+  const exportedReg = /\/\*\s+exported\s+(\w+)\s+\*\//
+  let exports = R.compose(
+    R.uniq,
+    // R.filter(exported => R.contains(fnMatchs, exported)),
+    R.map(exported => exportedReg.exec(exported)[1]),
+    R.match(new RegExp(exportedReg, 'g'))
+  )(cnt)
 
   if (exports.length) return exports
 
   // 没有exported 函数时，将所有的函数都暴露
-  let regStr = '^function\\s+(\\w+)'
-  let match = cnt.match(new RegExp(regStr, 'mg'))
+  let fnMatchs = cnt.match(new RegExp(fnReg, 'mg'))
 
-  // 没有函数
-  if (!match) return null
+  if (!fnMatchs) return null
 
-  return match.map(m => m.match(regStr)[1])
+  return fnMatchs.map(m => m.match(fnReg)[1])
 }
 
 function removeIncludes (cnt) {
   return cnt.replace(/include\(\[[\s\S]+?\]\)\s*;\s*/, '')
 }
 
-function generateImports (dir, paths) {
+function generateImports (dir, cnt, paths) {
+  let importCache = []
   return paths.map(filepath => {
-    let exportFns = parseExports(readFile(filepath))
-    if (!exportFns) return null
+    let fromCnt = readFile(filepath)
+    let imports = parseExports(fromCnt)
 
-    let imports = exportFns.map(fnStr => {
-      fileImportDict[dir] = fileImportDict[dir] || {}
-      fileImportDict[dir][fnStr] = (fileImportDict[dir][fnStr] + 1) || 1
+    if (!imports) return null
 
-      // 除第一次import外，都需要改变函数名
-      var occur = fileImportDict[dir][fnStr]
-      if (occur === 1) {
-        return fnStr
-      }
+    let declaredFns = R.compose(
+      R.map(m => m.match(fnReg)[1]),
+      R.match(new RegExp(fnReg, 'mg'))
+    )(cnt)
+    imports = R.compose(
+      // 排除已经import的函数
+      R.reject(importFn => R.contains(importFn, importCache)),
 
-      return `${fnStr} as ${fnStr}__TEMP__${occur}`
-    }).join(', ')
-    return `import { ${imports} } from '${filepath}';`
+      // 排除本文件声明过的函数
+      R.reject(importFn => R.contains(importFn, declaredFns))
+    )(imports)
+    importCache = R.concat(importCache, imports)
+    return `import { ${R.join(',', imports)} } from '${filepath}';`
   }).filter(nonNullFilter).join('\n')
 }
 
 function generateExports (fns) {
+  if (!fns) return ''
+
   return `export {\n    ${fns.join(',\n    ')}\n}`
 }
 

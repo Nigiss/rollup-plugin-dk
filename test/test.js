@@ -26,6 +26,8 @@ describe('rollup-plugin-dk', () => {
           'mod2__fn2',
           'mod3__fn2',
           'mod5__tpl1',
+          'mod7__fn1',
+          'mod9__fn1',
           'sameNameFn',
           'sameNameFn$1'
         ]))
