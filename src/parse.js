@@ -6,7 +6,7 @@ import R from 'ramda'
 const includesReg = /include\s*\(\[([^\]]+)\]\)\s*;?/
 
 // 同时包含 exported注释 和 函数声明时，才认为需要 export
-const exportedReg = /\/\*\s+exported\s+([$\w]+)\s+\*\//
+const exportedReg = /\/\*\s+(?:public|exported)\s+([$\w]+)\s+\*\//
 const declareReg = /(?:^function\s+([$\w]+)|^var\s+([$\w]+))/
 
 function nonNullFilter (item) {

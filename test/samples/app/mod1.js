@@ -5,7 +5,7 @@ include([
   '../lib/mod3.js'
 ])
 
-/* exported mod1__fn1 */
+/* public mod1__fn1 */
 /* exported mod1__fn2 */
 
 function sameNameFn () {}
