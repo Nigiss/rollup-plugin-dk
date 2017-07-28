@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-dk",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Seamless migration from es5 to es6 for `dk-fe` project",
   "main": "dist/rollup-plugin-dk.cjs.js",
   "jsnext:main": "dist/rollup-plugin-dk.es.js",
