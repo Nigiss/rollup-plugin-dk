@@ -16,11 +16,10 @@ describe('rollup-plugin-dk', () => {
     }).then(bundle => {
       var generated = bundle.generate()
       return generated.then(({ code }) => {
-        var fnsReg = /^function\s+([\w$]+)/
-        var fns = code.match(new RegExp(fnsReg, 'mg')).map(m => {
-          return m.match(fnsReg)[1]
-        })
+        const declareReg = /(?:^function\s+([$\w]+)|^var\s+([$\w]+);)/
+        var fns = code.match(new RegExp(declareReg, 'mg')).map(m => m.match(declareReg)[1] || m.match(declareReg)[2])
         assert.equal(formatArray(fns), formatArray([
+          '$',
           'mod1__fn1',
           'mod2__fn1',
           'mod2__fn2',
@@ -28,6 +27,7 @@ describe('rollup-plugin-dk', () => {
           'mod5__tpl1',
           'mod7__fn1',
           'mod9__fn1',
+          'mod10__var1',
           'sameNameFn',
           'sameNameFn$1'
         ]))

@@ -3,9 +3,11 @@ import path from 'path'
 import transform from './transform-tpl'
 import R from 'ramda'
 
-const fileCache = {}
 const includesReg = /include\s*\(\[([^\]]+)\]\)\s*;?/
-const fnReg = /^function\s+([$\w]+)/
+
+// 同时包含 exported注释 和 函数声明时，才认为需要 export
+const exportedReg = /\/\*\s+exported\s+([$\w]+)\s+\*\//
+const declareReg = /(?:^function\s+([$\w]+)|^var\s+([$\w]+))/
 
 function nonNullFilter (item) {
   return !!item
@@ -15,10 +17,8 @@ function readFile (filepath) {
   // css 不解析
   if (filepath.match(/\.css$/)) return null
 
-  let cnt = fileCache[filepath] || (fileCache[filepath] = fs.readFileSync(filepath, 'utf8'))
-
   // 转译模板
-  return transform(cnt)
+  return transform(fs.readFileSync(filepath, 'utf8'))
 }
 
 function isEs6Code (cnt) {
@@ -39,6 +39,11 @@ function needParse (cnt) {
   return true
 }
 
+function parseDeclared (m) {
+  // function | var
+  return m.match(declareReg)[1] || m.match(declareReg)[2]
+}
+
 function parseIncludes (dir, cnt) {
   const match = cnt.match(includesReg)
   if (!match) return []
@@ -53,11 +58,8 @@ function parseIncludes (dir, cnt) {
 function parseExports (cnt) {
   if (!cnt || !needParse(cnt)) return null
 
-  // 同时包含 exported注释 和 函数声明时，才认为需要 export
-  const exportedReg = /\/\*\s+exported\s+(\w+)\s+\*\//
   let exports = R.compose(
     R.uniq,
-    // R.filter(exported => R.contains(fnMatchs, exported)),
     R.map(exported => exportedReg.exec(exported)[1]),
     R.match(new RegExp(exportedReg, 'g'))
   )(cnt)
@@ -65,11 +67,11 @@ function parseExports (cnt) {
   if (exports.length) return exports
 
   // 没有exported 函数时，将所有的函数都暴露
-  let fnMatchs = cnt.match(new RegExp(fnReg, 'mg'))
+  let fnMatchs = cnt.match(new RegExp(declareReg, 'mg'))
 
   if (!fnMatchs) return null
 
-  return fnMatchs.map(m => m.match(fnReg)[1])
+  return fnMatchs.map(parseDeclared)
 }
 
 function removeIncludes (cnt) {
@@ -85,8 +87,8 @@ function generateImports (dir, cnt, paths) {
     if (!imports) return null
 
     let declaredFns = R.compose(
-      R.map(m => m.match(fnReg)[1]),
-      R.match(new RegExp(fnReg, 'mg'))
+      R.map(parseDeclared),
+      R.match(new RegExp(declareReg, 'mg'))
     )(cnt)
     imports = R.compose(
       // 排除已经import的函数

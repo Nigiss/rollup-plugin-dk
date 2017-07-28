@@ -6,6 +6,8 @@ import mod4 from '../mod4-es6'
 /* global mod5__tpl1 */
 /* global mod7__fn1 */
 /* global mod9__fn1 */
+/* global $ */
+/* global mod10__var1 */
 
 include([
   'mod1.js',
@@ -14,6 +16,7 @@ include([
   '../mod6.js',
   '../mod7.js',
   '../mod8.js',
+  '../mod10.js',
   'style.css'
 ])
 
@@ -24,5 +27,7 @@ export default function () {
     return
   }
 
-  return mod1__fn1() + mod2__fn2() + mod4() + mod5__tpl1() + mod7__fn1() + mod9__fn1()
+  let x = mod10__var1
+
+  return mod1__fn1() + mod2__fn2() + mod4() + mod5__tpl1() + mod7__fn1() + mod9__fn1() + $() + x
 }
